@@ -1,96 +1,47 @@
-import getChatResponse from "../../api/getChatResponse";
-import { aiPreferences } from "../../constant";
+import { FormEvent, useEffect, useState } from "react";
 import { useChat } from "../../providers";
-import { removeEmojisAndPattern } from "../../utils";
-import { init } from "../../api/session";
 
 const ChatBox = () => {
-  const {
-    messages,
-    setMessages,
-    input,
-    setInput,
-    isTalking,
-    isTyping,
-    setIsTyping,
-    setIsTalking,
-    setAudioUrl,
-    selectedCharacter,
-  } = useChat();
+  const { messages, setMessages, input, setInput, dc } = useChat();
 
-  const handleSend = async () => {
-    await init();
+  useEffect(() => {
+    if (!dc) return;
+    const handleEvent = (e) => {
+      const rlEvents = JSON.parse(e.data);
+      // Start a new content part during
 
-    if (input.trim() === "") return;
+      if (rlEvents.type === "response.text.done") {
+        setMessages((v) => [
+          ...v,
+          { sender: "assistant", text: rlEvents.text },
+        ]);
+      }
+      console.log("rtEvent: ", rlEvents);
+    };
+    dc.addEventListener("message", handleEvent);
+    return () => {
+      dc.removeEventListener("message", handleEvent);
+    };
+  }, [dc]);
 
-    // Add user message
-    const newMessages = [...messages, { sender: "user", text: input }];
-    setMessages(newMessages);
+  const handleSend = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessages((v) => [...v, { sender: "user", text: input }]);
     setInput("");
-    setIsTyping(true);
 
-    try {
-      let botResponse = await getChatResponse(
-        selectedCharacter,
-        newMessages.map((msg) => `${msg.sender}: ${msg.text}`).join("\n")
-      );
-
-      // Filter the bot responses
-      botResponse = removeEmojisAndPattern(botResponse);
-
-      // Add a bot response message (without audio initially)
-      const botMessage = { sender: "bot", text: "" }; // Empty message to simulate typing
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: "bot", text: botResponse },
-      ]);
-
-      const selectedCharacterJson = aiPreferences.filter(
-        (aiCharacter) => aiCharacter.id === selectedCharacter
-      )[0]; // return json model for the selected character
-
-      // const audioUrl = await generateTTS(
-      //   botResponse,
-      //   selectedCharacterJson.edgeSoundType,
-      //   selectedCharacterJson.rate,
-      //   selectedCharacterJson.volume,
-      //   selectedCharacterJson.pitch
-      // );
-      // setAudioUrl(audioUrl);
-
-      // if (audioUrl) {
-      //   const audio = new Audio(audioUrl);
-      //   // Wait for the audio to finish before proceeding
-      //   audio.onloadedmetadata = () => {
-      //     const audioDuration = audio.duration * 1000; // Duration in milliseconds
-      //     setIsTalking(true); // Set isTalking to true when the bot starts speaking
-      //     // Simulate typing effect by gradually revealing the message
-      //     let charIndex = 0;
-      //     const interval = audioDuration / botResponse.length; // Interval for each character to appear
-      //     const typingInterval = setInterval(() => {
-      //       if (charIndex < botResponse.length) {
-      //         botMessage.text = botResponse.slice(0, charIndex + 1);
-      //         setMessages((prevMessages) => {
-      //           const updatedMessages = [...prevMessages];
-      //           updatedMessages[updatedMessages.length - 1] = botMessage; // Update last message
-      //           return updatedMessages;
-      //         });
-      //         charIndex++;
-      //       } else {
-      //         clearInterval(typingInterval); // Stop typing once the message is fully revealed
-      //       }
-      //     }, interval);
-      //   };
-      // }
-    } catch (error) {
-      console.error("Error fetching response:", error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: "bot", text: "Sorry, there was an error!" },
-      ]);
-    } finally {
-      setIsTyping(false);
+    if (dc?.readyState !== "open") {
+      console.error("Cannnot send message, session is not open");
+      return;
     }
+    const responseCreate = {
+      type: "response.create",
+      response: {
+        modalities: ["text"],
+        instructions: input,
+      },
+    };
+
+    dc.send(JSON.stringify(responseCreate));
   };
   return (
     <div
@@ -120,37 +71,29 @@ const ChatBox = () => {
             ></div>
           </div>
         ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="max-w-xs p-3 rounded-lg bg-gray-300 text-[#4A628A]">
-              ...
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Input Field */}
-      <div className="flex items-center mt-4 space-x-2">
+      <form onSubmit={handleSend} className="flex items-center mt-4 space-x-2">
         <input
           type="text"
           placeholder={`${
-            isTalking || isTyping
+            false
               ? "Pixiepal was trying to answer your chat..."
               : " Type your message for pixiepal..."
           }`}
           className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7AB2D3]"
           value={input}
-          disabled={isTalking || isTyping ? true : false}
+          disabled={false}
           onChange={(e) => setInput(e.target.value)}
         />
         <button
           className="px-4 py-2 bg-[#7AB2D3] text-white rounded-lg hover:bg-[#4A628A] transition duration-300"
-          disabled={isTalking || isTyping ? true : false}
-          onClick={handleSend}
+          disabled={false}
+          type="submit"
         >
           Send
         </button>
-      </div>
+      </form>
     </div>
   );
 };
