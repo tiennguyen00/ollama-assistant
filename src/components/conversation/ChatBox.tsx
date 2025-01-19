@@ -2,6 +2,7 @@ import getChatResponse from "../../api/getChatResponse";
 import { aiPreferences } from "../../constant";
 import { useChat } from "../../providers";
 import { removeEmojisAndPattern } from "../../utils";
+import { init } from "../../api/session";
 
 const ChatBox = () => {
   const {
@@ -16,7 +17,10 @@ const ChatBox = () => {
     setAudioUrl,
     selectedCharacter,
   } = useChat();
+
   const handleSend = async () => {
+    await init();
+
     if (input.trim() === "") return;
 
     // Add user message

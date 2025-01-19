@@ -1,4 +1,4 @@
-import axios from "axios";
+import { client } from ".";
 import { aiPreferences } from "../constant";
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -20,39 +20,24 @@ const getChatResponse = async (selectedModel: string, userMessage: string) => {
       ${modelDesc}
     `;
 
-    const response = await axios.post(
-      `${import.meta.env.VITE_OPEN_API_HOST}/chat/completions`,
-      {
-        model: `${import.meta.env.VITE_AI_MODEL}`,
-        messages: [
-          {
-            role: "system",
-            content: prompt,
-          },
-          {
-            role: "user",
-            content: userMessage,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 300,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_OPEN_API_KEY}`,
-        },
-      }
-    );
-
-    const chatResponse =
-      response.data.choices[0]?.message?.content?.trim() ||
-      "Sorry, there was a problem!";
-    return chatResponse;
+    const stream = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: userMessage },
+      ],
+      stream: true,
+    });
+    for await (const chunk of stream) {
+      console.log(chunk.choices[0]?.delta?.content || "");
+    }
   } catch (error) {
     console.error("Error in API request:", error);
     return "Sorry, I couldn't fetch a response.";
   }
 };
+
+// Creater RealtimeAPI using WebRTC
+// 1. Genn EPHEMERAL_KEY
 
 export default getChatResponse;
