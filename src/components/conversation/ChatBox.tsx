@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect } from "react";
 import { useChat } from "../../providers";
+import { MicrophoneIcon } from "@heroicons/react/20/solid";
 
 const ChatBox = () => {
   const { messages, setMessages, input, setInput, dc } = useChat();
@@ -43,9 +44,12 @@ const ChatBox = () => {
 
     dc.send(JSON.stringify(responseCreate));
   };
+
+  const handleVoiceMedia = () => {};
+
   return (
     <div
-      className="flex flex-col h-full p-4 overflow-y-scroll bg-gray-100 rounded-lg shadow-lg max-h-svh scrollbar-thin"
+      className="flex flex-col flex-1 h-full p-4 overflow-y-scroll bg-gray-100 rounded-lg shadow-lg max-h-svh scrollbar-thin"
       style={{
         background: "linear-gradient(to right, #DFF2EB, #B9E5E8)",
       }}
@@ -60,7 +64,7 @@ const ChatBox = () => {
             }`}
           >
             <div
-              className={`max-w-xs p-3 rounded-xl text-lg ${
+              className={`max-w-4/5 p-3 rounded-xl text-lg ${
                 message.sender === "user"
                   ? "bg-[#7AB2D3] text-white"
                   : "bg-gray-300 text-[#4A628A]"
@@ -74,6 +78,10 @@ const ChatBox = () => {
       </div>
 
       <form onSubmit={handleSend} className="flex items-center mt-4 space-x-2">
+        <MicrophoneIcon
+          className="cursor-pointer size-6"
+          onClick={handleVoiceMedia}
+        />
         <input
           type="text"
           placeholder={`${

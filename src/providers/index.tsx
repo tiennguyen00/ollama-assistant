@@ -4,9 +4,7 @@ const ChatContext = createContext({});
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [dc, setDC] = useState<RTCDataChannel | null>(null);
-  const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hey there! How can I assist you today?" },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
   // Create Realtime session
@@ -21,9 +19,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     const pc = new RTCPeerConnection();
 
     // Set up to play remote audio from the model
-    const audioEl = document.createElement("audio");
-    audioEl.autoplay = true;
-    pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
+    // const audioEl = document.createElement("audio");
+    // audioEl.autoplay = true;
+    // pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
 
     // Add local audio track for microphone input in the browser
     const ms = await navigator.mediaDevices.getUserMedia({
@@ -56,6 +54,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     };
     await pc.setRemoteDescription(answer as RTCSessionDescriptionInit);
   };
+
   useEffect(() => {
     init();
   }, []);
