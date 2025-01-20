@@ -1,15 +1,11 @@
-import { client } from ".";
 import { aiPreferences } from "../constant";
+import { readStream } from "../utils";
 
-const MAX_MESSAGE_LENGTH = 1000;
-
-const getChatResponse = async (selectedModel: string, userMessage: string) => {
-  const isProduction = import.meta.env.MODE === "production";
-
-  if (isProduction && userMessage.length > MAX_MESSAGE_LENGTH) {
-    return `I'm sorry, your message is too long, the maximal message send is ${MAX_MESSAGE_LENGTH} char.`;
-  }
-
+const getChatResponse = async (
+  selectedModel: string,
+  messages: { role: string; content: string }[],
+  setCurrentMessage: (message: string) => void
+) => {
   const character = aiPreferences.find((char) => char.id === selectedModel);
   const modelDesc = character ? character.modelDescriptionBehaviour : "";
 
@@ -20,24 +16,48 @@ const getChatResponse = async (selectedModel: string, userMessage: string) => {
       ${modelDesc}
     `;
 
-    const stream = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: userMessage },
-      ],
-      stream: true,
-    });
-    for await (const chunk of stream) {
-      console.log(chunk.choices[0]?.delta?.content || "");
+    // Create chat completion
+    const response = await fetch(
+      `${import.meta.env.VITE_OPEN_API_HOST}/chat/completions`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "developer",
+              content: prompt,
+            },
+            ...messages,
+          ],
+          temperature: 0.7,
+          max_completion_tokens: 300,
+          stream: true,
+        }),
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    let responseText = "";
+
+    const reader = response.body?.getReader();
+    if (reader) {
+      for await (const chunk of readStream(reader)) {
+        const delta = chunk.choices?.[0]?.delta?.content || "";
+        responseText += delta || "";
+        setCurrentMessage(responseText);
+      }
+    } else {
+      throw new Error("No reader found");
     }
+    return responseText;
   } catch (error) {
-    console.error("Error in API request:", error);
-    return "Sorry, I couldn't fetch a response.";
+    setCurrentMessage("Sorry, I couldn't fetch a response.");
+    return "Sorry, I couldn't fetch a response." + error;
   }
 };
-
-// Creater RealtimeAPI using WebRTC
-// 1. Genn EPHEMERAL_KEY
 
 export default getChatResponse;

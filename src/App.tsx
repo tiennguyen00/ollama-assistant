@@ -4,7 +4,7 @@ import { About, Conversation, Home, User } from "./pages";
 
 function App() {
   return (
-    <main className="flex flex-col w-screen min-h-screen">
+    <main className="flex flex-col w-full min-h-screen">
       <Router>
         <Navbar />
         <Routes>

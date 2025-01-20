@@ -17,3 +17,31 @@ export function removeEmojisAndPattern(text: string) {
 
   return textCleaned;
 }
+
+export async function* readStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>
+) {
+  const decoder = new TextDecoder("utf-8");
+  let done = false;
+
+  while (!done) {
+    const { value, done: streamDone } = await reader.read();
+    done = streamDone;
+
+    if (value) {
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n").filter((line) => line.trim() !== "");
+
+      for (const line of lines) {
+        if (line === "data: [DONE]") {
+          return; // End the stream when [DONE] is encountered
+        }
+
+        if (line.startsWith("data: ")) {
+          const json = JSON.parse(line.substring(6)); // Parse the JSON after "data: "
+          yield json; // Yield the parsed object
+        }
+      }
+    }
+  }
+}

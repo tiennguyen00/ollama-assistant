@@ -1,9 +1,14 @@
-import { FormEvent, useEffect } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useChat } from "../../providers";
 import { MicrophoneIcon } from "@heroicons/react/20/solid";
+import getChatResponse from "../../api/getChatResponse";
+import { aiPreferences } from "../../constant";
+import { useRealtimeSession } from "./useRealtimeSession";
 
 const ChatBox = () => {
-  const { messages, setMessages, input, setInput, dc } = useChat();
+  const { messages, setMessages, input, setInput } = useChat();
+  const { dc, initRealtimeSession } = useRealtimeSession();
+  const [currentMessage, setCurrentMessage] = useState<string>("");
 
   useEffect(() => {
     if (!dc) return;
@@ -27,29 +32,39 @@ const ChatBox = () => {
 
   const handleSend = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessages((v) => [...v, { sender: "user", text: input }]);
+    setMessages((v) => [...v, { role: "user", content: input }]);
     setInput("");
 
-    if (dc?.readyState !== "open") {
-      console.error("Cannnot send message, session is not open");
-      return;
-    }
-    const responseCreate = {
-      type: "response.create",
-      response: {
-        modalities: ["text"],
-        instructions: input,
-      },
-    };
+    const response = await getChatResponse(
+      aiPreferences[0].id,
+      [...messages, { role: "user", content: input }],
+      setCurrentMessage
+    );
+    setMessages((v) => [...v, { role: "assistant", content: response }]);
+    setCurrentMessage("");
 
-    dc.send(JSON.stringify(responseCreate));
+    // if (dc?.readyState !== "open") {
+    //   console.error("Cannnot send message, session is not open");
+    //   return;
+    // }
+    // const responseCreate = {
+    //   type: "response.create",
+    //   response: {
+    //     modalities: ["text"],
+    //     instructions: input,
+    //   },
+    // };
+
+    // dc.send(JSON.stringify(responseCreate));
   };
 
-  const handleVoiceMedia = () => {};
+  const handleVoiceMedia = () => {
+    initRealtimeSession();
+  };
 
   return (
     <div
-      className="flex flex-col flex-1 h-full p-4 overflow-y-scroll bg-gray-100 rounded-lg shadow-lg max-h-svh scrollbar-thin"
+      className="flex flex-col flex-1 w-full h-full p-4 "
       style={{
         background: "linear-gradient(to right, #DFF2EB, #B9E5E8)",
       }}
@@ -60,21 +75,31 @@ const ChatBox = () => {
           <div
             key={index}
             className={`flex ${
-              message.sender === "user" ? "justify-end" : "justify-start"
+              message.role === "user" ? "justify-end" : "justify-start"
             }`}
           >
             <div
-              className={`max-w-4/5 p-3 rounded-xl text-lg ${
-                message.sender === "user"
+              className={`max-w-[80%] p-3 rounded-xl text-lg ${
+                message.role === "user"
                   ? "bg-[#7AB2D3] text-white"
                   : "bg-gray-300 text-[#4A628A]"
               }`}
               dangerouslySetInnerHTML={{
-                __html: message.text,
+                __html: message.content,
               }}
             ></div>
           </div>
         ))}
+        {currentMessage && (
+          <div className={"flex justify-start"}>
+            <div
+              className={`max-w-[60%] p-3 rounded-xl text-lg bg-gray-300 text-[#4A628A]`}
+              dangerouslySetInnerHTML={{
+                __html: currentMessage,
+              }}
+            ></div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSend} className="flex items-center mt-4 space-x-2">
