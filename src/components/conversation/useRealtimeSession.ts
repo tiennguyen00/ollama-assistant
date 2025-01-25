@@ -2,6 +2,8 @@ import { useState } from "react";
 
 export const useRealtimeSession = () => {
   const [dc, setDC] = useState<RTCDataChannel | null>(null);
+  const [ms, setMS] = useState<MediaStream | null>(null);
+  const [audioUrl, setAudioUrl] = useState(""); // State for audio URL
 
   // Create Realtime session
   const initRealtimeSession = async () => {
@@ -15,14 +17,11 @@ export const useRealtimeSession = () => {
     const pc = new RTCPeerConnection();
 
     // Set up to play remote audio from the model
-    // const audioEl = document.createElement("audio");
-    // audioEl.autoplay = true;
-    // pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
+    const audioEl = document.createElement("audio");
+    audioEl.autoplay = true;
+    pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
 
-    // Add local audio track for microphone input in the browser
-    const ms = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
+    const ms = await audioStream();
     pc.addTrack(ms.getTracks()[0]);
 
     // Set up data channel for sending and receiving events
@@ -51,5 +50,14 @@ export const useRealtimeSession = () => {
     await pc.setRemoteDescription(answer as RTCSessionDescriptionInit);
   };
 
-  return { initRealtimeSession, dc, setDC };
+  const audioStream = async () => {
+    // Add local audio track for microphone input in the browser
+    const ms = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
+    setMS(ms);
+    return ms;
+  };
+
+  return { initRealtimeSession, dc, setDC, ms, audioUrl, setAudioUrl };
 };

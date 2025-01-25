@@ -12,7 +12,7 @@ const CharacterSelection = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null); // referensi untuk ukuran canvasnya
   const [app, setApp] = useState<PIXI.Application<PIXI.ICanvas> | null>(null);
   const [selectedModel, setSelectedModel] = useState(
-    aiPreferences[0].modelData
+    aiPreferences[4].modelData
   );
 
   useEffect(() => {
@@ -20,7 +20,7 @@ const CharacterSelection = () => {
       view: canvasRef.current as HTMLCanvasElement,
       autoStart: true,
       resizeTo: canvasRef.current as HTMLCanvasElement,
-      backgroundColor: "#4a628a",
+      backgroundAlpha: 0,
     });
     setApp(app);
 
@@ -96,16 +96,14 @@ const CharacterSelection = () => {
   }, [app, selectedModel]);
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full gap-4">
-      {/* Model Canvas */}
+    <>
       <canvas
         ref={canvasRef}
-        className="w-full h-[400px] bg-transparent rounded-2xl"
-        style={{ overflow: "hidden" }}
+        className="flex items-center justify-center w-full h-full overflow-hidden"
       />
 
       {/* Character Selection */}
-      <div className="w-full py-5 overflow-x-auto">
+      {/* <div className="w-full py-5 overflow-x-auto">
         <section className="flex justify-center gap-4 w-max">
           {aiPreferences.map((char, index) => (
             <div key={index} className="flex flex-col items-center">
@@ -130,8 +128,8 @@ const CharacterSelection = () => {
             </div>
           ))}
         </section>
-      </div>
-    </div>
+      </div> */}
+    </>
   );
 };
 

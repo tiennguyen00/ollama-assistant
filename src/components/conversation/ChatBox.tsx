@@ -4,22 +4,27 @@ import { MicrophoneIcon } from "@heroicons/react/20/solid";
 import getChatResponse from "../../api/getChatResponse";
 import { aiPreferences } from "../../constant";
 import { useRealtimeSession } from "./useRealtimeSession";
+import CharacterSelection from "../home/CharacterSelection";
+import { useTTS } from "./useTTS";
+import Loading from "../Loading";
 
 const ChatBox = () => {
   const { messages, setMessages, input, setInput } = useChat();
-  const { dc, initRealtimeSession } = useRealtimeSession();
+  const { dc, initRealtimeSession, ms } = useRealtimeSession();
   const [currentMessage, setCurrentMessage] = useState<string>("");
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const { fetchTTS } = useTTS();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!dc) return;
     const handleEvent = (e) => {
       const rlEvents = JSON.parse(e.data);
-      // Start a new content part during
 
-      if (rlEvents.type === "response.text.done") {
+      if (rlEvents.type === "response.audio_transcript.done") {
         setMessages((v) => [
           ...v,
-          { sender: "assistant", text: rlEvents.text },
+          { role: "assistant", content: rlEvents.transcript },
         ]);
       }
       console.log("rtEvent: ", rlEvents);
@@ -32,45 +37,41 @@ const ChatBox = () => {
 
   const handleSend = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
     setMessages((v) => [...v, { role: "user", content: input }]);
+
     setInput("");
 
     const response = await getChatResponse(
-      aiPreferences[0].id,
+      aiPreferences[4].id,
       [...messages, { role: "user", content: input }],
       setCurrentMessage
     );
+
+    await fetchTTS(response);
     setMessages((v) => [...v, { role: "assistant", content: response }]);
     setCurrentMessage("");
-
-    // if (dc?.readyState !== "open") {
-    //   console.error("Cannnot send message, session is not open");
-    //   return;
-    // }
-    // const responseCreate = {
-    //   type: "response.create",
-    //   response: {
-    //     modalities: ["text"],
-    //     instructions: input,
-    //   },
-    // };
-
-    // dc.send(JSON.stringify(responseCreate));
+    setIsLoading(false);
   };
 
   const handleVoiceMedia = () => {
     initRealtimeSession();
+    setIsRecording(true);
   };
 
   return (
     <div
-      className="flex flex-col flex-1 w-full h-full p-4 "
+      className="relative flex flex-col w-full min-h-[calc(100dvh-80px)] px-4 pb-20"
       style={{
         background: "linear-gradient(to right, #DFF2EB, #B9E5E8)",
       }}
     >
+      <div className="absolute inset-0 z-0 -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+        <CharacterSelection />
+      </div>
       {/* Chat Messages */}
-      <div className="flex-grow space-y-4 overflow-y-auto">
+
+      <div className="inset-0 z-10 p-4 space-y-4 ">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -90,7 +91,12 @@ const ChatBox = () => {
             ></div>
           </div>
         ))}
-        {currentMessage && (
+        {isLoading && (
+          <div className="bg-gray-300 p-3 rounded-xl w-fit text-lg text-[#4A628A]">
+            <Loading />
+          </div>
+        )}
+        {/* {currentMessage && (
           <div className={"flex justify-start"}>
             <div
               className={`max-w-[60%] p-3 rounded-xl text-lg bg-gray-300 text-[#4A628A]`}
@@ -99,14 +105,32 @@ const ChatBox = () => {
               }}
             ></div>
           </div>
-        )}
+        )} */}
       </div>
 
-      <form onSubmit={handleSend} className="flex items-center mt-4 space-x-2">
-        <MicrophoneIcon
-          className="cursor-pointer size-6"
-          onClick={handleVoiceMedia}
-        />
+      <form
+        onSubmit={handleSend}
+        className="flex items-center w-full space-x-2"
+      >
+        <div className="relative flex items-center justify-center w-10 h-10">
+          {isRecording ? (
+            <MicrophoneIcon
+              className="cursor-pointer size-6"
+              onClick={() => {
+                ms?.getTracks().forEach((track) => track.stop());
+                setIsRecording(false);
+              }}
+            />
+          ) : (
+            <>
+              <div className="absolute w-4/5 h-1 rotate-45 bg-black rounded-full" />
+              <MicrophoneIcon
+                className="cursor-pointer size-6"
+                onClick={handleVoiceMedia}
+              />
+            </>
+          )}
+        </div>
         <input
           type="text"
           placeholder={`${
