@@ -7,9 +7,18 @@ import { useRealtimeSession } from "./useRealtimeSession";
 import CharacterSelection from "../home/CharacterSelection";
 import { useTTS } from "./useTTS";
 import Loading from "../Loading";
+import videoURL from "../../../public/videos/test.mp3?url";
 
 const ChatBox = () => {
-  const { messages, setMessages, input, setInput } = useChat();
+  const {
+    messages,
+    setMessages,
+    input,
+    setInput,
+    handleLipsync,
+    model,
+    setModel,
+  } = useChat();
   const { dc, initRealtimeSession, ms } = useRealtimeSession();
   const [currentMessage, setCurrentMessage] = useState<string>("");
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -18,7 +27,7 @@ const ChatBox = () => {
 
   useEffect(() => {
     if (!dc) return;
-    const handleEvent = (e) => {
+    const handleEvent = async (e) => {
       const rlEvents = JSON.parse(e.data);
 
       if (rlEvents.type === "response.audio_transcript.done") {
@@ -36,6 +45,7 @@ const ChatBox = () => {
   }, [dc]);
 
   const handleSend = async (e: FormEvent<HTMLFormElement>) => {
+    // handleLipsync(videoURL);
     e.preventDefault();
     setIsLoading(true);
     setMessages((v) => [...v, { role: "user", content: input }]);
@@ -67,7 +77,7 @@ const ChatBox = () => {
       }}
     >
       <div className="absolute inset-0 z-0 -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-        <CharacterSelection />
+        <CharacterSelection model={model} setModel={setModel} />
       </div>
       {/* Chat Messages */}
 
@@ -135,7 +145,7 @@ const ChatBox = () => {
           type="text"
           placeholder={`${
             false
-              ? "Pixiepal was trying to answer your chat..."
+              ? "I was trying to answer your chat..."
               : " Type your message for pixiepal..."
           }`}
           className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7AB2D3]"

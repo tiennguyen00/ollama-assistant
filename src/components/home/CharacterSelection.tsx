@@ -8,12 +8,15 @@ import { aiPreferences } from "../../constant";
 // reference window.PIXI.Ticker to automatically update Live2D models
 window.PIXI = PIXI;
 
-const CharacterSelection = () => {
+interface CharacterSelectionProps {
+  model: Live2DModel | null;
+  setModel: (model: Live2DModel | null) => void;
+}
+
+const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null); // referensi untuk ukuran canvasnya
   const [app, setApp] = useState<PIXI.Application<PIXI.ICanvas> | null>(null);
-  const [selectedModel, setSelectedModel] = useState(
-    aiPreferences[4].modelData
-  );
+  const selectedModel = aiPreferences[4].modelData;
 
   useEffect(() => {
     const app = new PIXI.Application({
@@ -73,6 +76,7 @@ const CharacterSelection = () => {
 
     const loadModel = async () => {
       await Live2DModel.from(selectedModel).then((model) => {
+        setModel(model);
         model.anchor.set(0.5, 0.5);
         model.position.set(canvasWidth / 2, canvasHeight / 2);
 
@@ -87,7 +91,7 @@ const CharacterSelection = () => {
         try {
           app.stage.addChild(model);
         } catch (error) {
-          console.log(error);
+          console.error("error while addChild model", error);
         }
       });
     };
