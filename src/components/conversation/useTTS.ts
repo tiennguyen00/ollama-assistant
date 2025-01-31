@@ -8,6 +8,7 @@ const useTTS = () => {
           model: "tts-1",
           input: text,
           voice: "sage",
+          speed: 0.75,
         }),
         headers: {
           Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
@@ -17,9 +18,7 @@ const useTTS = () => {
     );
     const blob = await response.blob();
 
-    const audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
-    audio.play();
+    return blob;
   };
   return { fetchTTS };
 };

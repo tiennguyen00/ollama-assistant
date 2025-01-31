@@ -103,4 +103,15 @@ export const aiPreferences = [
     volume: "85%", // Clear but not too loud to reflect her delicate, refined sound
     pitch: "50Hz", // Higher pitch to match her youthful, ethereal character with a slight machine-like edge
   },
+  {
+    id: "haru",
+    name: "Haru",
+    modelData: "/cubism/haru_greeter/haru_greeter_t05.model3.json",
+    edgeSoundType: "en-US-GuyNeural", // Male voice, deeper and with more warmth to match Hijiki's personality
+    modelDescriptionBehaviour: `
+      Haru is a cheerful and energetic young woman with a friendly and outgoing personality. 
+      She's always smiling and full of energy, making her the life of the party. 
+      Haru's voice is bright, energetic, and full of enthusiasm, always making her the center of attention in any conversation.
+    `,
+  },
 ];

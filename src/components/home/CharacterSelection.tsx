@@ -4,9 +4,7 @@ import * as PIXI from "pixi.js";
 import { Live2DModel } from "pixi-live2d-display-lipsyncpatch";
 import { aiPreferences } from "../../constant";
 
-// expose PIXI to window so that this plugin is able to
-// reference window.PIXI.Ticker to automatically update Live2D models
-window.PIXI = PIXI;
+import { Ticker } from "@pixi/ticker";
 
 interface CharacterSelectionProps {
   model: Live2DModel | null;
@@ -16,7 +14,7 @@ interface CharacterSelectionProps {
 const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null); // referensi untuk ukuran canvasnya
   const [app, setApp] = useState<PIXI.Application<PIXI.ICanvas> | null>(null);
-  const selectedModel = aiPreferences[4].modelData;
+  const selectedModel = aiPreferences[aiPreferences.length - 1].modelData;
 
   useEffect(() => {
     const app = new PIXI.Application({
@@ -75,7 +73,9 @@ const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
     const canvasHeight = canvasRef.current!.offsetHeight;
 
     const loadModel = async () => {
-      await Live2DModel.from(selectedModel).then((model) => {
+      await Live2DModel.from(selectedModel, {
+        autoUpdate: false,
+      }).then((model) => {
         setModel(model);
         model.anchor.set(0.5, 0.5);
         model.position.set(canvasWidth / 2, canvasHeight / 2);
@@ -87,6 +87,19 @@ const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
         const uniformScale = Math.min(scaleX, scaleY); // *0.9 untuk memberikan sedikit margin
 
         model.scale.set(uniformScale);
+
+        // manual update model animation frame by frame
+        const speedFactor = 1;
+        const ticker = new Ticker();
+        ticker.add(() => model.update(ticker.elapsedMS));
+        let then = performance.now();
+        function tick(now) {
+          const deltaTime = (now - then) * speedFactor; // Scale down the time
+          model.update(deltaTime);
+          then = now;
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
 
         try {
           app.stage.addChild(model);
@@ -100,40 +113,10 @@ const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
   }, [app, selectedModel]);
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        className="flex items-center justify-center w-full h-full overflow-hidden"
-      />
-
-      {/* Character Selection */}
-      {/* <div className="w-full py-5 overflow-x-auto">
-        <section className="flex justify-center gap-4 w-max">
-          {aiPreferences.map((char, index) => (
-            <div key={index} className="flex flex-col items-center">
-              <button
-                onClick={() => setSelectedModel(char.modelData)}
-                className={`flex flex-col items-center p-2 border border-gray-300 rounded-2xl shadow w-28 h-36 overflow-hidden ${
-                  selectedModel === char.modelData
-                    ? "bg-ghost"
-                    : "bg-blue-muted"
-                }`}
-              >
-                <img
-                  // src={catPixel}
-                  src=""
-                  alt={char.name}
-                  className="object-cover w-20 h-20 mb-4"
-                />
-                <span className="text-sm font-bold text-center uppercase">
-                  {char.name}
-                </span>
-              </button>
-            </div>
-          ))}
-        </section>
-      </div> */}
-    </>
+    <canvas
+      ref={canvasRef}
+      className="flex items-center justify-center w-full h-full overflow-hidden"
+    />
   );
 };
 
