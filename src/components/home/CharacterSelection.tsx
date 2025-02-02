@@ -115,7 +115,7 @@ const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
   return (
     <canvas
       ref={canvasRef}
-      className="flex items-center justify-center w-full h-full overflow-hidden"
+      className="flex items-center justify-center w-full overflow-hidden"
     />
   );
 };
