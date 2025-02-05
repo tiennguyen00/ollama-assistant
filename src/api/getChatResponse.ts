@@ -66,11 +66,13 @@ const getChatResponse = async (
 // 13, 14.  15 smile, 16 nervous, 17 embrassing,
 // 18, 19 smile-embarrassed. 20 minding, 21 enjoying,
 // 22, 23, 25 smiling. 24 sulk. 26 surprised
+// nodding, blushing, nervous, sulk, surprised, reject, minding, or enjoying
+
 const getChatExpression = (ex: string | undefined) => {
   const random = Math.random();
   switch (ex) {
     case "*nodding*":
-      return random < 0.25 ? 1 : random < 0.5 ? 2 : random < 0.75 ? 3 : 4;
+      return random < 0.5 ? 1 : 2;
     case "*blushing*":
       return random < 0.25 ? 18 : random < 0.5 ? 19 : random < 0.75 ? 10 : 7;
     case "*nervous*":
@@ -79,8 +81,14 @@ const getChatExpression = (ex: string | undefined) => {
       return random < 0.25 ? 24 : random < 0.5 ? 25 : random < 0.75 ? 26 : 20;
     case "*surprised*":
       return random < 0.25 ? 26 : random < 0.5 ? 23 : random < 0.75 ? 22 : 21;
+    case "*enjoying*":
+      return 21;
+    case "*reject*":
+      return random < 0.5 ? 11 : 12;
+    case "*minding*":
+      return 20;
     default:
-      return random < 0.25 ? 1 : random < 0.5 ? 2 : random < 0.75 ? 3 : 4;
+      return 5;
   }
 };
 

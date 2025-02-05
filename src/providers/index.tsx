@@ -8,9 +8,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [input, setInput] = useState("");
   const [model, setModel] = useState<Live2DModel | null>(null);
 
-  const handleLipsync = (url: string) => {
+  const handleLipsync = async (url: string) => {
     if (!model) return;
-    model.speak(url, {
+    await model.speak(url, {
       volume: 1,
       expression: 1,
       resetExpression: true,

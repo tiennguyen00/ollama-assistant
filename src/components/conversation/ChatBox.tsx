@@ -49,7 +49,7 @@ const ChatBox = () => {
     if (!model) return;
 
     const id = setTimeout(() => {
-      model.internalModel.motionManager.startMotion("default", 26);
+      model.internalModel.motionManager.startMotion("default", 9);
     }, 500);
 
     model.internalModel.motionManager.on(
@@ -88,6 +88,11 @@ const ChatBox = () => {
 
     const expression = getChatExpression(response.split(" ").pop());
     console.log("expression", expression, response.split(" ").pop());
+    model.internalModel.motionManager.startMotion(
+      "default",
+      expression,
+      MotionPriority.FORCE
+    );
 
     const blob = await fetchTTS(response);
     const formData = new FormData();
@@ -99,11 +104,6 @@ const ChatBox = () => {
     });
 
     handleLipsync(videoURL);
-    model.internalModel.motionManager.startMotion(
-      "default",
-      expression,
-      MotionPriority.FORCE
-    );
 
     setMessages((v) => [...v, { role: "assistant", content: response }]);
     setIsLoading(false);
@@ -116,7 +116,7 @@ const ChatBox = () => {
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
-    model.internalModel.motionManager.startMotion("default", 20);
+    // model.internalModel.motionManager.startMotion("default", 20);
   };
 
   return (
