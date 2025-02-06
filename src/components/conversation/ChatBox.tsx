@@ -13,8 +13,8 @@ import { useRealtimeSession } from "./useRealtimeSession";
 const CharacterSelection = lazy(() => import("../home/CharacterSelection"));
 import { useTTS } from "./useTTS";
 import Loading from "../Loading";
-import videoURL from "../../server/uploads/output.mp3";
 import { MotionPriority } from "pixi-live2d-display";
+import { fetchMedia, uploadMedia } from "../../firebase";
 
 const ChatBox = () => {
   const {
@@ -56,6 +56,7 @@ const ChatBox = () => {
       model.internalModel.motionManager.startMotion("default", 9);
     }, 500);
 
+    fetchMedia();
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     model.internalModel.motionManager.on(
@@ -91,14 +92,10 @@ const ChatBox = () => {
     );
 
     const blob = await fetchTTS(response);
-    const formData = new FormData();
-    formData.append("file", blob, "output.mp3");
-
-    await fetch(`${import.meta.env.VITE_PUBLIC_CLIENT_API}/upload`, {
-      method: "POST",
-      body: formData,
-    });
-
+    // upload blobfile to Firebase storage
+    await uploadMedia(blob);
+    const videoURL = await fetchMedia();
+    console.log("videoURl: ", videoURL);
     handleLipsync(videoURL);
 
     setMessages((v) => [...v, { role: "assistant", content: response }]);
