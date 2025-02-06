@@ -11,7 +11,7 @@ const useTTS = () => {
           speed: 0.75,
         }),
         headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API}`,
           "Content-Type": "application/json",
         },
       }

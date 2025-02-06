@@ -8,7 +8,7 @@ import {
 } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBNE7-FCG98BjZhUFWUjxu2qzaYrosp24M",
+  apiKey: import.meta.env.VITE_FIREBASE_API,
   authDomain: "r3f-character.firebaseapp.com",
   databaseURL:
     "https://r3f-character-default-rtdb.asia-southeast1.firebasedatabase.app",
