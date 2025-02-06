@@ -34,7 +34,7 @@ const getChatResponse = async (
           stream: true,
         }),
         headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API}`,
           "Content-Type": "application/json",
         },
       }
