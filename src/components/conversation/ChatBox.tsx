@@ -1,10 +1,16 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import { useChat } from "../../providers";
-import { MicrophoneIcon } from "@heroicons/react/20/solid";
 import { getChatExpression, getChatResponse } from "../../api/getChatResponse";
 import { aiPreferences } from "../../constant";
 import { useRealtimeSession } from "./useRealtimeSession";
-import CharacterSelection from "../home/CharacterSelection";
+const CharacterSelection = lazy(() => import("../home/CharacterSelection"));
 import { useTTS } from "./useTTS";
 import Loading from "../Loading";
 import videoURL from "../../server/uploads/output.mp3";
@@ -20,20 +26,18 @@ const ChatBox = () => {
     model,
     setModel,
   } = useChat();
-  const { dc, initRealtimeSession, ms } = useRealtimeSession();
-  const [currentMessage, setCurrentMessage] = useState<string>("");
-  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const { dc } = useRealtimeSession();
   const { fetchTTS } = useTTS();
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!dc) return;
-    const handleEvent = async (e) => {
+    const handleEvent = async (e: { data: string }) => {
       const rlEvents = JSON.parse(e.data);
 
       if (rlEvents.type === "response.audio_transcript.done") {
-        setMessages((v) => [
-          ...v,
+        setMessages([
+          ...messages,
           { role: "assistant", content: rlEvents.transcript },
         ]);
       }
@@ -52,18 +56,12 @@ const ChatBox = () => {
       model.internalModel.motionManager.startMotion("default", 9);
     }, 500);
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     model.internalModel.motionManager.on(
       "motionStart",
-      (group, index, audio) => {
-        console.log("motionStart", group, index, audio);
-        if (audio) {
-          // e.g. show subtitle for this audio
-          console.log("audio", group, index);
-
-          audio.addEventListener("ended", () => {
-            console.log("ended");
-          });
-        }
+      (group: unknown, index: unknown) => {
+        console.log("motionStart", group, index);
       }
     );
     return () => {
@@ -73,17 +71,15 @@ const ChatBox = () => {
 
   const handleSend = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!model) return;
 
-    setCurrentMessage("");
     setIsLoading(true);
     setMessages((v) => [...v, { role: "user", content: input }]);
-
     setInput("");
 
     const response = await getChatResponse(
       aiPreferences[aiPreferences.length - 1].id,
-      [...messages, { role: "user", content: input }],
-      setCurrentMessage
+      [...messages, { role: "user", content: input }]
     );
 
     const expression = getChatExpression(response.split(" ").pop());
@@ -109,14 +105,13 @@ const ChatBox = () => {
     setIsLoading(false);
   };
 
-  const handleVoiceMedia = () => {
-    initRealtimeSession();
-    setIsRecording(true);
-  };
+  // const handleVoiceMedia = () => {
+  //   initRealtimeSession();
+  //   setIsRecording(true);
+  // };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
-    // model.internalModel.motionManager.startMotion("default", 20);
   };
 
   return (
@@ -151,11 +146,7 @@ const ChatBox = () => {
         </div> */}
         <input
           type="text"
-          placeholder={`${
-            false
-              ? "I was trying to answer your chat..."
-              : " Type your message for pixiepal..."
-          }`}
+          placeholder={`${" Type your message for pixiepal..."}`}
           className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7AB2D3]"
           value={input}
           disabled={false}
@@ -171,7 +162,9 @@ const ChatBox = () => {
       </form>
       <div className="relative flex-1">
         <div className="md:absolute px-4 my-auto w-full max-h-full md:-translate-x-[calc(50%-215px)]">
-          <CharacterSelection model={model} setModel={setModel} />
+          <Suspense fallback={null}>
+            <CharacterSelection setModel={setModel} />
+          </Suspense>
         </div>
 
         <div className="absolute md:max-w-[60%] right-0 flex flex-col px-4 max-h-full py-4  items-end pt-2 space-y-2 overflow-y-auto">

@@ -1,10 +1,25 @@
 import { Live2DModel } from "pixi-live2d-display-lipsyncpatch";
 import { createContext, useState, useContext } from "react";
 
-const ChatContext = createContext({});
+type MessageType = {
+  role: string;
+  content: string;
+};
+
+interface ChatContextProps {
+  messages: MessageType[];
+  setMessages: React.Dispatch<React.SetStateAction<MessageType[]>>;
+  input: string;
+  setInput: (input: string) => void;
+  model: Live2DModel | null;
+  setModel: (model: Live2DModel | null) => void;
+  handleLipsync: (url: string) => Promise<void>;
+}
+
+const ChatContext = createContext<ChatContextProps | null>(null);
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<MessageType[]>([]);
   const [input, setInput] = useState("");
   const [model, setModel] = useState<Live2DModel | null>(null);
 

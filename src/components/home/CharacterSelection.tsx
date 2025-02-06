@@ -7,11 +7,10 @@ import { aiPreferences } from "../../constant";
 import { Ticker } from "@pixi/ticker";
 
 interface CharacterSelectionProps {
-  model: Live2DModel | null;
   setModel: (model: Live2DModel | null) => void;
 }
 
-const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
+const CharacterSelection = ({ setModel }: CharacterSelectionProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null); // referensi untuk ukuran canvasnya
   const [app, setApp] = useState<PIXI.Application<PIXI.ICanvas> | null>(null);
   const selectedModel = aiPreferences[aiPreferences.length - 1].modelData;
@@ -27,7 +26,8 @@ const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
 
     // Add resize re render
     const handleResize = () => {
-      const model = app.stage.children[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = app.stage.children[0] as any;
 
       const canvasWidth = canvasRef.current!.offsetWidth;
       const canvasHeight = canvasRef.current!.offsetHeight;
@@ -93,7 +93,7 @@ const CharacterSelection = ({ model, setModel }: CharacterSelectionProps) => {
         const ticker = new Ticker();
         ticker.add(() => model.update(ticker.elapsedMS));
         let then = performance.now();
-        function tick(now) {
+        function tick(now: number) {
           const deltaTime = (now - then) * speedFactor; // Scale down the time
           model.update(deltaTime);
           then = now;

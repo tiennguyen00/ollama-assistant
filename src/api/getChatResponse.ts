@@ -3,8 +3,7 @@ import { readStream } from "../utils";
 
 const getChatResponse = async (
   selectedModel: string,
-  messages: { role: string; content: string }[],
-  setCurrentMessage: (message: string) => void
+  messages: { role: string; content: string }[]
 ) => {
   const character = aiPreferences.find((char) => char.id === selectedModel);
   const modelDesc = character ? character.modelDescriptionBehaviour : "";
@@ -48,14 +47,12 @@ const getChatResponse = async (
       for await (const chunk of readStream(reader)) {
         const delta = chunk.choices?.[0]?.delta?.content || "";
         responseText += delta || "";
-        setCurrentMessage(responseText);
       }
     } else {
       throw new Error("No reader found");
     }
     return responseText;
   } catch (error) {
-    setCurrentMessage("Sorry, I couldn't fetch a response.");
     return "Sorry, I couldn't fetch a response." + error;
   }
 };
