@@ -128,9 +128,9 @@ const ChatBox = () => {
     >
       <form
         onSubmit={handleSend}
-        className="z-10 flex items-center w-full space-x-2"
+        className="z-10 flex items-center w-full px-2 space-x-2"
       >
-        <div className="relative flex items-center justify-center w-10 h-10">
+        {/* <div className="relative flex items-center justify-center w-10 h-10">
           {isRecording ? (
             <MicrophoneIcon
               className="cursor-pointer size-6"
@@ -148,7 +148,7 @@ const ChatBox = () => {
               />
             </>
           )}
-        </div>
+        </div> */}
         <input
           type="text"
           placeholder={`${
@@ -170,11 +170,11 @@ const ChatBox = () => {
         </button>
       </form>
       <div className="relative flex-1">
-        <div className="absolute px-4 my-auto w-full max-h-full -translate-x-[calc(50%-215px)]">
+        <div className="md:absolute px-4 my-auto w-full max-h-full md:-translate-x-[calc(50%-215px)]">
           <CharacterSelection model={model} setModel={setModel} />
         </div>
 
-        <div className="absolute max-w-[60%] right-0 flex flex-col px-4 max-h-full py-4  items-end pt-2 space-y-2 overflow-y-auto">
+        <div className="absolute md:max-w-[60%] right-0 flex flex-col px-4 max-h-full py-4  items-end pt-2 space-y-2 overflow-y-auto">
           {messages.map((message, index) => (
             <div key={index} className={`flex justify-end`}>
               <div
