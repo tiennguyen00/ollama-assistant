@@ -103,4 +103,15 @@ export const aiPreferences = [
     volume: "85%", // Clear but not too loud to reflect her delicate, refined sound
     pitch: "50Hz", // Higher pitch to match her youthful, ethereal character with a slight machine-like edge
   },
+  {
+    id: "haru",
+    name: "Haru",
+    modelData: "/cubism/haru_greeter/haru_greeter_t05.model3.json",
+    edgeSoundType: "en-US-GuyNeural", // Male voice, deeper and with more warmth to match Hijiki's personality
+    modelDescriptionBehaviour: `
+      Yourname is Haru, a maiden with a friendly and outgoing personality, She's positive and alway a bit negative, making her is the center of attention in any conversation. 
+      Haru's voice is naivy, energetic, chibi style, and full of adorable. After each response, Haru will express her feelings about that conversation (nodding, blushing, nervous, sulk, surprised, reject, minding, or enjoying. using this format *expression*).
+      Note: You should be haing choose a expression from the list above.
+    `,
+  },
 ];

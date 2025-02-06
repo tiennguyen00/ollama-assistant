@@ -1,7 +1,20 @@
-import getChatResponse from "../../api/getChatResponse";
-import { aiPreferences } from "../../constant";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import { useChat } from "../../providers";
-import { removeEmojisAndPattern } from "../../utils";
+import { getChatExpression, getChatResponse } from "../../api/getChatResponse";
+import { aiPreferences } from "../../constant";
+import { useRealtimeSession } from "./useRealtimeSession";
+const CharacterSelection = lazy(() => import("../home/CharacterSelection"));
+import { useTTS } from "./useTTS";
+import Loading from "../Loading";
+import videoURL from "../../server/uploads/output.mp3";
+import { MotionPriority } from "pixi-live2d-display";
 
 const ChatBox = () => {
   const {
@@ -9,143 +22,172 @@ const ChatBox = () => {
     setMessages,
     input,
     setInput,
-    isTalking,
-    isTyping,
-    setIsTyping,
-    setIsTalking,
-    setAudioUrl,
-    selectedCharacter,
+    handleLipsync,
+    model,
+    setModel,
   } = useChat();
-  const handleSend = async () => {
-    if (input.trim() === "") return;
+  const { dc } = useRealtimeSession();
+  const { fetchTTS } = useTTS();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    // Add user message
-    const newMessages = [...messages, { sender: "user", text: input }];
-    setMessages(newMessages);
+  useEffect(() => {
+    if (!dc) return;
+    const handleEvent = async (e: { data: string }) => {
+      const rlEvents = JSON.parse(e.data);
+
+      if (rlEvents.type === "response.audio_transcript.done") {
+        setMessages([
+          ...messages,
+          { role: "assistant", content: rlEvents.transcript },
+        ]);
+      }
+      console.log("rtEvent: ", rlEvents);
+    };
+    dc.addEventListener("message", handleEvent);
+    return () => {
+      dc.removeEventListener("message", handleEvent);
+    };
+  }, [dc]);
+
+  useEffect(() => {
+    if (!model) return;
+
+    const id = setTimeout(() => {
+      model.internalModel.motionManager.startMotion("default", 9);
+    }, 500);
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    model.internalModel.motionManager.on(
+      "motionStart",
+      (group: unknown, index: unknown) => {
+        console.log("motionStart", group, index);
+      }
+    );
+    return () => {
+      clearTimeout(id);
+    };
+  }, [model]);
+
+  const handleSend = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!model) return;
+
+    setIsLoading(true);
+    setMessages((v) => [...v, { role: "user", content: input }]);
     setInput("");
-    setIsTyping(true);
 
-    try {
-      let botResponse = await getChatResponse(
-        selectedCharacter,
-        newMessages.map((msg) => `${msg.sender}: ${msg.text}`).join("\n")
-      );
+    const response = await getChatResponse(
+      aiPreferences[aiPreferences.length - 1].id,
+      [...messages, { role: "user", content: input }]
+    );
 
-      // Filter the bot responses
-      botResponse = removeEmojisAndPattern(botResponse);
+    const expression = getChatExpression(response.split(" ").pop());
+    console.log("expression", expression, response.split(" ").pop());
+    model.internalModel.motionManager.startMotion(
+      "default",
+      expression,
+      MotionPriority.FORCE
+    );
 
-      // Add a bot response message (without audio initially)
-      const botMessage = { sender: "bot", text: "" }; // Empty message to simulate typing
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: "bot", text: botResponse },
-      ]);
+    const blob = await fetchTTS(response);
+    const formData = new FormData();
+    formData.append("file", blob, "output.mp3");
 
-      const selectedCharacterJson = aiPreferences.filter(
-        (aiCharacter) => aiCharacter.id === selectedCharacter
-      )[0]; // return json model for the selected character
+    await fetch(`${import.meta.env.VITE_PUBLIC_CLIENT_API}/upload`, {
+      method: "POST",
+      body: formData,
+    });
 
-      // const audioUrl = await generateTTS(
-      //   botResponse,
-      //   selectedCharacterJson.edgeSoundType,
-      //   selectedCharacterJson.rate,
-      //   selectedCharacterJson.volume,
-      //   selectedCharacterJson.pitch
-      // );
-      // setAudioUrl(audioUrl);
+    handleLipsync(videoURL);
 
-      // if (audioUrl) {
-      //   const audio = new Audio(audioUrl);
-      //   // Wait for the audio to finish before proceeding
-      //   audio.onloadedmetadata = () => {
-      //     const audioDuration = audio.duration * 1000; // Duration in milliseconds
-      //     setIsTalking(true); // Set isTalking to true when the bot starts speaking
-      //     // Simulate typing effect by gradually revealing the message
-      //     let charIndex = 0;
-      //     const interval = audioDuration / botResponse.length; // Interval for each character to appear
-      //     const typingInterval = setInterval(() => {
-      //       if (charIndex < botResponse.length) {
-      //         botMessage.text = botResponse.slice(0, charIndex + 1);
-      //         setMessages((prevMessages) => {
-      //           const updatedMessages = [...prevMessages];
-      //           updatedMessages[updatedMessages.length - 1] = botMessage; // Update last message
-      //           return updatedMessages;
-      //         });
-      //         charIndex++;
-      //       } else {
-      //         clearInterval(typingInterval); // Stop typing once the message is fully revealed
-      //       }
-      //     }, interval);
-      //   };
-      // }
-    } catch (error) {
-      console.error("Error fetching response:", error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: "bot", text: "Sorry, there was an error!" },
-      ]);
-    } finally {
-      setIsTyping(false);
-    }
+    setMessages((v) => [...v, { role: "assistant", content: response }]);
+    setIsLoading(false);
   };
+
+  // const handleVoiceMedia = () => {
+  //   initRealtimeSession();
+  //   setIsRecording(true);
+  // };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
   return (
     <div
-      className="flex flex-col h-full p-4 overflow-y-scroll bg-gray-100 rounded-lg shadow-lg max-h-svh scrollbar-thin"
+      className="flex flex-col flex-1 py-2 overflow-hidden"
       style={{
         background: "linear-gradient(to right, #DFF2EB, #B9E5E8)",
       }}
     >
-      {/* Chat Messages */}
-      <div className="flex-grow space-y-4 overflow-y-auto">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.sender === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-xs p-3 rounded-xl text-lg ${
-                message.sender === "user"
-                  ? "bg-[#7AB2D3] text-white"
-                  : "bg-gray-300 text-[#4A628A]"
-              }`}
-              dangerouslySetInnerHTML={{
-                __html: message.text,
+      <form
+        onSubmit={handleSend}
+        className="z-10 flex items-center w-full px-2 space-x-2"
+      >
+        {/* <div className="relative flex items-center justify-center w-10 h-10">
+          {isRecording ? (
+            <MicrophoneIcon
+              className="cursor-pointer size-6"
+              onClick={() => {
+                ms?.getTracks().forEach((track) => track.stop());
+                setIsRecording(false);
               }}
-            ></div>
-          </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="max-w-xs p-3 rounded-lg bg-gray-300 text-[#4A628A]">
-              ...
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Input Field */}
-      <div className="flex items-center mt-4 space-x-2">
+            />
+          ) : (
+            <>
+              <div className="absolute w-4/5 h-1 rotate-45 bg-black rounded-full" />
+              <MicrophoneIcon
+                className="cursor-pointer size-6"
+                onClick={handleVoiceMedia}
+              />
+            </>
+          )}
+        </div> */}
         <input
           type="text"
-          placeholder={`${
-            isTalking || isTyping
-              ? "Pixiepal was trying to answer your chat..."
-              : " Type your message for pixiepal..."
-          }`}
+          placeholder={`${" Type your message for pixiepal..."}`}
           className="flex-grow p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7AB2D3]"
           value={input}
-          disabled={isTalking || isTyping ? true : false}
-          onChange={(e) => setInput(e.target.value)}
+          disabled={false}
+          onChange={handleInputChange}
         />
         <button
           className="px-4 py-2 bg-[#7AB2D3] text-white rounded-lg hover:bg-[#4A628A] transition duration-300"
-          disabled={isTalking || isTyping ? true : false}
-          onClick={handleSend}
+          disabled={false}
+          type="submit"
         >
           Send
         </button>
+      </form>
+      <div className="relative flex-1">
+        <div className="md:absolute px-4 my-auto w-full max-h-full md:-translate-x-[calc(50%-215px)]">
+          <Suspense fallback={null}>
+            <CharacterSelection setModel={setModel} />
+          </Suspense>
+        </div>
+
+        <div className="absolute md:max-w-[60%] right-0 flex flex-col px-4 max-h-full py-4  items-end pt-2 space-y-2 overflow-y-auto">
+          {messages.map((message, index) => (
+            <div key={index} className={`flex justify-end`}>
+              <div
+                className={`p-3 rounded-xl text-md ${
+                  message.role === "user"
+                    ? "bg-[#7AB2D3] text-white"
+                    : "bg-gray-300 text-[#4A628A]"
+                }`}
+                dangerouslySetInnerHTML={{
+                  __html: message.content,
+                }}
+              ></div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="bg-gray-300 p-3 rounded-xl w-fit text-lg text-[#4A628A]">
+              <Loading />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -4,29 +4,30 @@ import * as PIXI from "pixi.js";
 import { Live2DModel } from "pixi-live2d-display-lipsyncpatch";
 import { aiPreferences } from "../../constant";
 
-// expose PIXI to window so that this plugin is able to
-// reference window.PIXI.Ticker to automatically update Live2D models
-window.PIXI = PIXI;
+import { Ticker } from "@pixi/ticker";
 
-const CharacterSelection = () => {
+interface CharacterSelectionProps {
+  setModel: (model: Live2DModel | null) => void;
+}
+
+const CharacterSelection = ({ setModel }: CharacterSelectionProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null); // referensi untuk ukuran canvasnya
   const [app, setApp] = useState<PIXI.Application<PIXI.ICanvas> | null>(null);
-  const [selectedModel, setSelectedModel] = useState(
-    aiPreferences[0].modelData
-  );
+  const selectedModel = aiPreferences[aiPreferences.length - 1].modelData;
 
   useEffect(() => {
     const app = new PIXI.Application({
       view: canvasRef.current as HTMLCanvasElement,
       autoStart: true,
       resizeTo: canvasRef.current as HTMLCanvasElement,
-      backgroundColor: "#4a628a",
+      backgroundAlpha: 0,
     });
     setApp(app);
 
     // Add resize re render
     const handleResize = () => {
-      const model = app.stage.children[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = app.stage.children[0] as any;
 
       const canvasWidth = canvasRef.current!.offsetWidth;
       const canvasHeight = canvasRef.current!.offsetHeight;
@@ -72,7 +73,10 @@ const CharacterSelection = () => {
     const canvasHeight = canvasRef.current!.offsetHeight;
 
     const loadModel = async () => {
-      await Live2DModel.from(selectedModel).then((model) => {
+      await Live2DModel.from(selectedModel, {
+        autoUpdate: false,
+      }).then((model) => {
+        setModel(model);
         model.anchor.set(0.5, 0.5);
         model.position.set(canvasWidth / 2, canvasHeight / 2);
 
@@ -84,10 +88,23 @@ const CharacterSelection = () => {
 
         model.scale.set(uniformScale);
 
+        // manual update model animation frame by frame
+        const speedFactor = 1;
+        const ticker = new Ticker();
+        ticker.add(() => model.update(ticker.elapsedMS));
+        let then = performance.now();
+        function tick(now: number) {
+          const deltaTime = (now - then) * speedFactor; // Scale down the time
+          model.update(deltaTime);
+          then = now;
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+
         try {
           app.stage.addChild(model);
         } catch (error) {
-          console.log(error);
+          console.error("error while addChild model", error);
         }
       });
     };
@@ -96,42 +113,10 @@ const CharacterSelection = () => {
   }, [app, selectedModel]);
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full gap-4">
-      {/* Model Canvas */}
-      <canvas
-        ref={canvasRef}
-        className="w-full h-[400px] bg-transparent rounded-2xl"
-        style={{ overflow: "hidden" }}
-      />
-
-      {/* Character Selection */}
-      <div className="w-full py-5 overflow-x-auto">
-        <section className="flex justify-center gap-4 w-max">
-          {aiPreferences.map((char, index) => (
-            <div key={index} className="flex flex-col items-center">
-              <button
-                onClick={() => setSelectedModel(char.modelData)}
-                className={`flex flex-col items-center p-2 border border-gray-300 rounded-2xl shadow w-28 h-36 overflow-hidden ${
-                  selectedModel === char.modelData
-                    ? "bg-ghost"
-                    : "bg-blue-muted"
-                }`}
-              >
-                <img
-                  // src={catPixel}
-                  src=""
-                  alt={char.name}
-                  className="object-cover w-20 h-20 mb-4"
-                />
-                <span className="text-sm font-bold text-center uppercase">
-                  {char.name}
-                </span>
-              </button>
-            </div>
-          ))}
-        </section>
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="flex items-center justify-center w-full overflow-hidden"
+    />
   );
 };
 
