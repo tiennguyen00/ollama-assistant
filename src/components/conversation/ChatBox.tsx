@@ -83,6 +83,8 @@ const ChatBox = () => {
       [...messages, { role: "user", content: input }]
     );
 
+    if (!response) return;
+
     const expression = getChatExpression(response.split(" ").pop());
     console.log("expression", expression, response.split(" ").pop());
     model.internalModel.motionManager.startMotion(

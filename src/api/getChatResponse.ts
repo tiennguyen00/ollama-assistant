@@ -1,3 +1,5 @@
+import { toast } from "react-toastify";
+import { Bounce } from "react-toastify";
 import { aiPreferences } from "../constant";
 import { readStream } from "../utils";
 
@@ -8,53 +10,99 @@ const getChatResponse = async (
   const character = aiPreferences.find((char) => char.id === selectedModel);
   const modelDesc = character ? character.modelDescriptionBehaviour : "";
 
-  try {
-    const prompt = `
+  // Get API key from localStorage or fall back to environment variable
+  const apiKey = localStorage.getItem("openai_api_key");
+
+  if (!apiKey) {
+    toast.error("API key is missing. Please add your OpenAI API key.", {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "light",
+      transition: Bounce,
+    });
+    return false;
+  }
+
+  const prompt = `
       You are the character called ${character?.name}. 
       Your behavior is as follows:
       ${modelDesc}
     `;
 
-    // Create chat completion
-    const response = await fetch(
-      `${import.meta.env.VITE_OPEN_API_HOST}/chat/completions`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "developer",
-              content: prompt,
-            },
-            ...messages,
-          ],
-          temperature: 0.7,
-          max_completion_tokens: 300,
-          stream: true,
-        }),
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    let responseText = "";
-
-    const reader = response.body?.getReader();
-    if (reader) {
-      for await (const chunk of readStream(reader)) {
-        const delta = chunk.choices?.[0]?.delta?.content || "";
-        responseText += delta || "";
-      }
-    } else {
-      throw new Error("No reader found");
+  const response = await fetch(
+    `${import.meta.env.VITE_OPEN_API_HOST}/chat/completions`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "developer",
+            content: prompt,
+          },
+          ...messages,
+        ],
+        temperature: 0.7,
+        max_completion_tokens: 300,
+        stream: true,
+      }),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
     }
-    return responseText;
-  } catch (error) {
-    return "Sorry, I couldn't fetch a response." + error;
+  );
+
+  if (!response.ok) {
+    const clonedResponse = response.clone();
+    try {
+      const errorJson = await clonedResponse.json();
+
+      toast.error(errorJson.error ? errorJson.error.message : "Unknown error", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      });
+    } catch {
+      toast.error("Error fetching response", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+        transition: Bounce,
+      });
+    }
+
+    return false;
   }
+
+  let responseText = "";
+
+  const reader = response.body?.getReader();
+  if (reader) {
+    for await (const chunk of readStream(reader)) {
+      const delta = chunk.choices?.[0]?.delta?.content || "";
+      responseText += delta || "";
+    }
+  } else {
+    throw new Error("No reader found");
+  }
+  return responseText;
 };
 
 // 1 nodding
